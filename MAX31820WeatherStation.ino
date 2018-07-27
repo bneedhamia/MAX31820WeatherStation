@@ -92,12 +92,13 @@ const int PIN_ONE_WIRE = 4;
 
 /*
    Time (milliseconds) per attempt to read and report the temperatures.
-   Set this to, say 500L (1/2 second) for temperature testing (e.g., to see which
-   sensor is which by heating one and seeing which sensor temperature changes).
-   Set this to over 10 minutes (1000L * 60L * 10L) for normal operation,
+   Set this to, say 500L (1/2 second) for temperature testing
+   (e.g., to see which sensor is which by heating one and seeing
+   which sensor temperature changes).
+   Set this to about 5 minutes (1000L * 60L * 5L) for normal operation,
    so you don't overwhelm the server.
 */
-const long MS_PER_TEMPERATURE_REQUEST = 1000L * 60L * 10L;
+const long MS_PER_TEMPERATURE_REQUEST = 1000L * 60L * 5L;
 
 /*
    The resolution (number of bits) to set the temperature sensor to.
