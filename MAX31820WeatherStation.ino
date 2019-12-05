@@ -21,6 +21,12 @@
 */
 //#define PRINT_1_WIRE_ADDRESS true
 
+/*
+    NOTE: because the ESP8266 WiFi operates in the background,
+     setup() and loop() must not take a long time.
+     In particular, never call any delay() greater than
+     a few hundred milliseconds.
+ */
 #include <ESP8266WiFi.h> // Defines WiFi, the WiFi controller object
 #include <WiFiClientSecure.h>
 #include <EEPROM.h>   // NOTE: ESP8266 EEPROM library differs from Arduino's.
@@ -43,6 +49,8 @@
 
      To Find the Fingerprint of a site:
      - Browse to an https: page on the desired server.
+       E.g., https://weatherstation.winderground.com
+       (you may get a 404 error; that's ok).
      - Copy the certificate from that page. There are instructions
        on how to do this in various browsers. Search for
        "read the certificate from a website in Chrome" (without quotes)
@@ -63,8 +71,8 @@
 const char *host = "weatherstation.wunderground.com";
 const int port = 443;
 const char *sslFingerprint
-  = "12 DB BB 24 8E 0F 6F D4 63 EC 45 DD 5B ED 37 D7 6F B1 5F E5";
-  // Certificate expires ‎Sunday, ‎September ‎15, ‎2019 11:25:18 AM UTC
+  = "50 22 08 9D DC 3C 2D FC 21 D4 22 30 07 8B 2E 68 63 47 20 02";
+  // Certificate expires August 25, 2021
 const char *httpProtocol = "HTTP/1.0";
 const char *url = "/weatherstation/updateweatherstation.php";
 const char *httpAgent = "ESP8266HttpsClient";
@@ -166,16 +174,7 @@ const uint8_t STATE_WAITING_FOR_NEXT_READ = 2;
 uint8_t state;
 unsigned long stateBegunMs = 0L;
 
-/*
-   client = manages the HTTPS connection to the web site.
-   wire = The 1-Wire interface manager.
-
-   NOTE: because the ESP8266 WiFi operates in the background,
-     loop() must not take a long time.
-     In particular, never (even in setup()) call any delay() greater than
-     a few hundred milliseconds.
-*/
-WiFiClientSecure client;
+// wire = The 1-Wire interface manager.
 OneWire wire(PIN_ONE_WIRE);
 DallasTemperature wireDevices(&wire);
 
@@ -382,6 +381,12 @@ boolean doHttpsPost() {
   char *pContent;  // a pointer into content[]
   char ch;
 
+  /*
+   * client = manages the HTTPS connection to the web site.
+   */
+  WiFiClientSecure client;
+
+
   // Build the content of the POST. That is, the parameters.
 
   strcpy(content, "");
@@ -411,22 +416,19 @@ boolean doHttpsPost() {
 
   // Perform the Post
 
+  client.setFingerprint(sslFingerprint);
   if (!client.connect(host, port)) {
     Serial.print("Failed to connect to ");
     Serial.print(host);
     Serial.print(" port ");
     Serial.println(port);
+    Serial.print(" using SSL fingerprint ");
+    Serial.print(sslFingerprint);
+    Serial.println();
     return false;
   }
   Serial.print("Connected to ");
   Serial.println(host);
-
-  if (!client.verify(sslFingerprint, host)) {
-    Serial.print("Fingerprint doesn't match certificate for ");
-    Serial.println(host);
-    client.stop();
-    return false;
-  }
 
   client.print("POST ");
   client.print(url);
