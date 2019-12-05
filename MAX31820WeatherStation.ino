@@ -89,6 +89,10 @@ const char *httpAgent = "MAX31820WeatherStation";
      The _L suffix indicates that the pin is Active-Low.
      Active-Low because that's how the ESP8266 Thing Dev board
      on-board LED is wired.
+     When the LED is steady-on, we're waiting to connect to the WiFi.
+     When the LED is blinking, we've encountered a non-recoverable error.
+     When the LED is off, things are working correctly.
+     
    PIN_ONE_WIRE = the 1-Wire bus data line for the temperature sensor.
    
    Note about the ESP8266 Thing Dev board I/O pins: several pins are unsuitable
@@ -164,18 +168,20 @@ const int EEPROM_STATION_KEY_INDEX = 4;
    stateBegunMs = if needed, the time (millis()) we entered this state.
 
    STATE_ERROR = an unrecoverable error has occurred. We stop.
+   STATE_WAITING_FOR_WIFI = we're waiting for the WiFi to connect
+     with the Access Point.
    STATE_WAITING_FOR_TEMPERATURES = we've issued a command to the sensors
      to read the temperature, and are waiting for the time to read
      their responses.
      For example, a 12-bit temperature read requires 750ms.
      stateBegunMs = time (millis()) we entered this state.
    STATE_WAITING_FOR_NEXT_READ = we're waiting to request temperature again.
-     stateBegunMs = time (millis()) we entered this state.
 */
 
 const uint8_t STATE_ERROR = 0;
-const uint8_t STATE_WAITING_FOR_TEMPERATURES = 1;
-const uint8_t STATE_WAITING_FOR_NEXT_READ = 2;
+const uint8_t STATE_WAITING_FOR_WIFI = 1;
+const uint8_t STATE_WAITING_FOR_TEMPERATURES = 2;
+const uint8_t STATE_WAITING_FOR_NEXT_READ = 3;
 uint8_t state;
 unsigned long stateBegunMs = 0L;
 
@@ -282,15 +288,6 @@ void setup() {
     return;
   }
 
-  // Do the one-time WiFi setup and connection
-  WiFi.mode(WIFI_STA);    // Station (Client), not soft AP or dual mode.
-  WiFi.setAutoConnect(false); // don't connect until I say
-  WiFi.setAutoReconnect(true); // if the connection ever drops, reconnect.
-  if (!connectToAccessPoint(wifiSsid, wifiPassword, wifiTimeoutMs)) {
-    state = STATE_ERROR;
-    return;
-  }
-
   /*
      Set up the temperature sensor:
      Set the digital temperature resolution.
@@ -300,15 +297,23 @@ void setup() {
   wireDevices.setResolution(MAX31820_RESOLUTION_BITS);
   wireDevices.setWaitForConversion(false);
 
-  // Start the first temperature reading.
-  wireDevices.requestTemperatures();
-  state = STATE_WAITING_FOR_TEMPERATURES;
+  // Finally, do the one-time WiFi setup and request connection
+  WiFi.mode(WIFI_STA);    // Station (Client), not soft AP or dual mode.
+  WiFi.setAutoConnect(false); // don't connect until we call .begin()
+  WiFi.setAutoReconnect(true); // if the connection drops, reconnect.
+
+  Serial.print(F("Connecting to "));
+  Serial.println(wifiSsid);
+  WiFi.begin(wifiSsid, wifiPassword);
+
+  state = STATE_WAITING_FOR_WIFI;
   stateBegunMs = millis();
 }
 
 // Called repeatedly, automatically.
 void loop() {
   unsigned long nowMs; // The current time (millis())
+  int wifiStatus;  // connection state of the WiFi.
 
   nowMs = millis();
 
@@ -319,6 +324,39 @@ void loop() {
         digitalWrite(PIN_LED_L, LOW);
       } else {
         digitalWrite(PIN_LED_L, HIGH);
+      }
+      break;
+
+    case STATE_WAITING_FOR_WIFI:
+      // Waiting for either WiFi connection or connection failure.
+      
+      wifiStatus = WiFi.status();
+      if (wifiStatus == WL_CONNECT_FAILED) {
+        // bad password. Fail.
+        Serial.print(F("Password incorrect for "));
+        Serial.println(wifiSsid);
+        state = STATE_ERROR;
+        stateBegunMs = millis();
+        
+      } else if (wifiStatus == WL_NO_SSID_AVAIL) {
+        // Show we're waiting.
+        digitalWrite(PIN_LED_L, LOW);
+
+        // Continue to wait for the WiFi AP to become available.
+        // This state is our house-power-fail recovery state.
+        
+      } else if (wifiStatus == WL_CONNECTED) {
+        // We've connected to WiFi. Start reading temperatures.
+        Serial.print(F("Connected, IP address: "));
+        Serial.println(WiFi.localIP());
+
+        // Indicate we're working fine.
+        digitalWrite(PIN_LED_L, HIGH);
+
+        // Ask the sensor to read its temperature.
+        wireDevices.requestTemperatures();
+        state = STATE_WAITING_FOR_TEMPERATURES;
+        stateBegunMs = millis();
       }
       break;
 
@@ -348,7 +386,7 @@ void loop() {
 
       // Wait until it's time to request the temperature again.
       state = STATE_WAITING_FOR_NEXT_READ;
-      stateBegunMs = nowMs;
+      stateBegunMs = millis();
 
       break;
 
@@ -553,66 +591,6 @@ void print1WireAddress(DeviceAddress addr) {
     Serial.print(addr[i], HEX);
   }
   Serial.print("}");
-}
-
-/*
-   Connect to the local WiFi Access Point.
-   The Auto Reconnect feature of the ESP8266 should keep us connected.
-
-   ssid = the WiFi Access Point to connect to.
-   pass = the password for that Access Point.
-   timeoutMs = maximum time (milliseconds) to wait for the connection.
-
-   Returns true if successful; false if a nonrecoverable error occurred.
-*/
-boolean connectToAccessPoint(char *ssid, char *pass, long timeoutMs) {
-  unsigned long startTimeMs;  // time (millis()) when we started connecting.
-  unsigned long nowMs;  // the current time (millis())
-
-  Serial.print(F("Connecting to "));
-  Serial.println(ssid);
-
-  startTimeMs = millis();
-  WiFi.begin(ssid, wifiPassword);
-
-  // Wait for the connection or timeout.
-  int wifiStatus = WiFi.status();
-  while (wifiStatus != WL_CONNECTED)
-  {
-    nowMs = millis();
-
-    if (wifiStatus == WL_NO_SSID_AVAIL) {
-      // Access Point is offline.
-      Serial.print(F("Unable to find "));
-      Serial.println(ssid);
-      return false;
-    }
-    if (wifiStatus == WL_CONNECT_FAILED) {
-      // bad password
-      Serial.print(F("Password incorrect for "));
-      Serial.println(ssid);
-      return false;
-    }
-    if ((long) (nowMs - startTimeMs) > timeoutMs) {
-      // Connection has taken too long
-      Serial.print(F("Timeout connecting to "));
-      Serial.println(ssid);
-      return false;
-    }
-
-    /*
-       The WiFi stack is still trying to connect.
-       Give it a moment and check again.
-    */
-
-    delay(100);
-    wifiStatus = WiFi.status();
-  }
-
-  Serial.print(F("Connected, IP address: "));
-  Serial.println(WiFi.localIP());
-
-  return true;
 }
 
 /********************************
