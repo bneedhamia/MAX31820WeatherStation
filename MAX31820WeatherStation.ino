@@ -45,6 +45,7 @@
        which is hard to parse.
      url = the url, less https:// and the server name.
      httpAgent = a string to identify our client software.
+       The original uses the name of the Github Repository of this project.
        Replace this with whatever you like (no spaces).
 
      To Find the Fingerprint of a site:
@@ -75,7 +76,7 @@ const char *sslFingerprint
   // Certificate expires August 25, 2021
 const char *httpProtocol = "HTTP/1.0";
 const char *url = "/weatherstation/updateweatherstation.php";
-const char *httpAgent = "ESP8266HttpsClient";
+const char *httpAgent = "MAX31820WeatherStation";
 
 /*
    Hardware information:
