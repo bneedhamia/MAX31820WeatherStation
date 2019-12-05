@@ -308,14 +308,14 @@ void setup() {
 
 // Called repeatedly, automatically.
 void loop() {
-  long nowMs;
+  unsigned long nowMs; // The current time (millis())
 
   nowMs = millis();
 
   switch (state) {
     case STATE_ERROR:
       // Blink the led.
-      if (nowMs % 1000 < 500) {
+      if (nowMs % 1000 < 500) { // will be slightly long at millis() rollover.
         digitalWrite(PIN_LED_L, LOW);
       } else {
         digitalWrite(PIN_LED_L, HIGH);
@@ -567,7 +567,7 @@ void print1WireAddress(DeviceAddress addr) {
 */
 boolean connectToAccessPoint(char *ssid, char *pass, long timeoutMs) {
   unsigned long startTimeMs;  // time (millis()) when we started connecting.
-  unsigned long now;  // the current time (millis())
+  unsigned long nowMs;  // the current time (millis())
 
   Serial.print(F("Connecting to "));
   Serial.println(ssid);
@@ -579,7 +579,7 @@ boolean connectToAccessPoint(char *ssid, char *pass, long timeoutMs) {
   int wifiStatus = WiFi.status();
   while (wifiStatus != WL_CONNECTED)
   {
-    now = millis();
+    nowMs = millis();
 
     if (wifiStatus == WL_NO_SSID_AVAIL) {
       // Access Point is offline.
@@ -593,7 +593,7 @@ boolean connectToAccessPoint(char *ssid, char *pass, long timeoutMs) {
       Serial.println(ssid);
       return false;
     }
-    if ((long) (now - startTimeMs) > timeoutMs) {
+    if ((long) (nowMs - startTimeMs) > timeoutMs) {
       // Connection has taken too long
       Serial.print(F("Timeout connecting to "));
       Serial.println(ssid);
