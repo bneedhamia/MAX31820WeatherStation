@@ -3,7 +3,11 @@
    to read the ambient temperature from a MAX31820 chip
    and send that temperature to Weather Underground.
 
-   Copyright (c) 2018 Bradford Needham
+   NOTE: You will need to update sensorAddress{}
+   and likely update sslFingerprint[]. See the comments by those variables.
+   You will also need to program the EEPROM. See "The EEPROM layout" below.
+
+   Copyright (c) 2018, 2019 Bradford Needham
    { @bneedhamia , https://www.needhamia.com }
 
    Licensed under GPL V2
@@ -40,12 +44,12 @@
      sslFingerprint = the SHA1 fingerprint of the SSL Certificate
        of the web site we will be connecting to.
      httpProtocol = the protocol to use. Some sites prefer HTTP/1.1.
-       I use HTTP/1.0 to avoid getting a response that is
+       This Sketch uses HTTP/1.0 to avoid getting a response that is
        Transfer-encoding: chunked
        which is hard to parse.
      url = the url, less https:// and the server name.
      httpAgent = a string to identify our client software.
-       The original uses the name of the Github Repository of this project.
+       This Sketch uses the name of the Github Repository of this project.
        Replace this with whatever you like (no spaces).
 
      To Find the Fingerprint of a site:
@@ -57,7 +61,7 @@
        "read the certificate from a website in Chrome" (without quotes)
        or whatever web client you prefer.
      - Save the certificate in Base-64 encoded X.509
-     - In git bash (or in a linux terminal window, type
+     - In git bash (or in a linux terminal window), type
        openssl x509 -noout -fingerprint -sha1 -inform pem -in certificate-file.cer
        Where "certificate-file.cer" is the filename of the certificate you saved.
      - in the response, copy the colon-separated set of numbers.
@@ -101,9 +105,6 @@ const int PIN_ONE_WIRE = 4;
 
 /*
    Time (milliseconds) per attempt to read and report the temperatures.
-   Set this to, say 500L (1/2 second) for temperature testing
-   (e.g., to see which sensor is which by heating one and seeing
-   which sensor temperature changes).
    Set this to about 5 minutes (1000L * 60L * 5L) for normal operation,
    so you don't overwhelm the server.
 */
@@ -120,14 +121,17 @@ const uint8_t MAX31820_RESOLUTION_BITS = 12;
 /*
    The EEPROM layout, starting at START_ADDRESS, is:
    String[EEPROM_WIFI_SSID_INDEX] = WiFi SSID. A null-terminated string
-   String[EEPROM_WIFI_PASS_INDEX] = WiFi Password. A null-terminated string 1
+   String[EEPROM_WIFI_PASS_INDEX] = WiFi Password. A null-terminated string
    String[EEPROM_WIFI_TIMEOUT_SECS_INDEX] = WiFi connection timeout, in seconds,
-     as an Ascii string.
+     as an Ascii string (60 seconds is a reasonable timeout).
    String[EEPROM_STATION_ID_INDEX] =
-     the HTTPS POST weather station ID parameter to send.
+     the HTTPS POST Weather Underground station ID parameter to send.
    String[EEPROM_STATION_KEY_INDEX] =
-     the HTTPS POST station key parameter to send.
+     the HTTPS POST Weather Underground station key parameter to send.
    EEPROM_END_MARK
+
+   To create a Station ID and Key for your particular weather station,
+   visit https://www.wunderground.com/member/devices/new
 
    To write these values, use the Sketch write_eeprom_strings.
    See https://github.com/bneedhamia/write_eeprom_strings
@@ -157,7 +161,7 @@ const int EEPROM_STATION_KEY_INDEX = 4;
    The states of the state machine that loop() runs.
 
    state = the current state of the machine. A STATE_* value.
-   stateBegunMs = if needed, the time (millis() we entered this state.
+   stateBegunMs = if needed, the time (millis()) we entered this state.
 
    STATE_ERROR = an unrecoverable error has occurred. We stop.
    STATE_WAITING_FOR_TEMPERATURES = we've issued a command to the sensors
@@ -175,15 +179,18 @@ const uint8_t STATE_WAITING_FOR_NEXT_READ = 2;
 uint8_t state;
 unsigned long stateBegunMs = 0L;
 
-// wire = The 1-Wire interface manager.
+/*
+   wire = The 1-Wire (thermometer) interface manager.
+   wireDevices = the manager for the1Wire devices (thermometers).
+ */
 OneWire wire(PIN_ONE_WIRE);
 DallasTemperature wireDevices(&wire);
 
 /*
    WiFi access point parameters, read from EEPROM.
 
-   wifiSsid = SSID of the local WiFi network to connect to.
-   wifiPassword = Password of the network.
+   wifiSsid = SSID of the local WiFi Access Point to connect to.
+   wifiPassword = Password of the Access Point.
    wifiTimeoutMs = Wifi connection timeout, in milliseconds.
 */
 char *wifiSsid;
@@ -192,7 +199,6 @@ long wifiTimeoutMs;
 
 /*
    HTTPS POST private parameters, read from EEPROM.
-  TODO replace with station ID and Password.
    stationId = the POST 'ID' parameter.
    stationKey = the POST 'PASSWORD' parameter.
 */
@@ -201,28 +207,26 @@ char *stationKey;
 
 /*
    sensorAddress = the 1-wire address of the temperature sensor on the 1-wire bus.
+   Update this array for your unique temperature sensor.
 
-   I created this initializer by:
-   1) Uncommenting PRINT_1_WIRE_ADDRESS (above)
-   2) Running the Sketch, and copying and pasting the output here.
-   3) Commenting out PRINT_1_WIRE_ADDRESS (above)
-   4) Starting the Sketch.
+   Create this initializer by:
+   1) Wiring up the temperature sensor to the ESP8266, as described in Diary.odt
+   2) Uncommenting PRINT_1_WIRE_ADDRESS (above)
+   3) Running the Sketch, and copying and pasting the output here.
+   4) Commenting out PRINT_1_WIRE_ADDRESS (above)
+   5) Running the Sketch as normal.
 */
 DeviceAddress sensorAddress = {0x28, 0xAB, 0xA8, 0xA8, 0x7, 0x0, 0x0, 0x78};
 
 /*
-   The results of measurement:
+   The result of measurement:
 
-   wellDepthM = the depth of well water, in meters from the bottom of the tank,
-    or -1 if the depth calculation failed.
-    Note: the accuracy of this value is likely about 20cm.
    stationTemperatureC = the temperature (degrees Celsius) read from the sensor,
     or <= DEVICE_DISCONNECTED_C if the sensor failed.
-    Indexed by the sensor number in sensorAddress[].
 */
 float stationTemperatureC;
 
-// Called once automatically on Reset.
+// Called once automatically on ESP8266 Reset.
 void setup() {
   Serial.begin(9600);
   delay(100); // give the Serial port time to power up.
@@ -246,7 +250,7 @@ void setup() {
 
   /*
      Read the wifi parameters from EEPROM, if they're there.
-     Convert the timeout from a string and Seconds
+     Convert the timeout from a string in Seconds
        to a long number of milliseconds.
   */
   wifiSsid = readEEPROMString(START_ADDRESS, EEPROM_WIFI_SSID_INDEX);
@@ -268,9 +272,7 @@ void setup() {
     return;
   }
 
-  /*
-     Read the Weather station ID and key from EEPROM
-  */
+  // Read our Weather Underground station credentials from EEPROM
   stationId = readEEPROMString(START_ADDRESS, EEPROM_STATION_ID_INDEX);
   stationKey = readEEPROMString(START_ADDRESS, EEPROM_STATION_KEY_INDEX);
   if (stationId == 0 || stationKey == 0) {
@@ -290,7 +292,7 @@ void setup() {
   }
 
   /*
-     Set up the temperature sensors:
+     Set up the temperature sensor:
      Set the digital temperature resolution.
      Set the library to have requestTemperatures() return immediately
        rather than waiting the (too long for our WiFi) conversion time.
@@ -337,11 +339,11 @@ void loop() {
       }
       Serial.println();
 
-      // Report all our data (that we have) to the web server.
+      // Report our data to the web server.
       if (doHttpsPost()) {
         digitalWrite(PIN_LED_L, HIGH); // success: turn off the LED.
       } else {
-        digitalWrite(PIN_LED_L, LOW); // failure: turn on the LED.
+        digitalWrite(PIN_LED_L, LOW); // recoverable failure: turn on the LED.
       }
 
       // Wait until it's time to request the temperature again.
@@ -355,7 +357,7 @@ void loop() {
         return; // wait more.
       }
 
-      // Request the sensors to read their temperatures.
+      // Ask the sensor to read its temperature.
       wireDevices.requestTemperatures();
       state = STATE_WAITING_FOR_TEMPERATURES;
       stateBegunMs = millis();
@@ -373,7 +375,7 @@ void loop() {
     Uploads the temperature - that's all our weather station knows.
     Uses:
       stationId, stationKey
-      stationTemperatureC [] TODO rename
+      stationTemperatureC
       and the server information (host, post, etc.)
 
     Returns true if successful, false otherwise.
@@ -383,9 +385,7 @@ boolean doHttpsPost() {
   char *pContent;  // a pointer into content[]
   char ch;
 
-  /*
-   * client = manages the HTTPS connection to the web site.
-   */
+  // client = manager of the HTTPS connection to the web site.
   WiFiClientSecure client;
 
 
@@ -413,7 +413,7 @@ boolean doHttpsPost() {
     strcat(content, "&");
     strcat(content, "tempf=");
     floatcat(content, temperatureF);
-  }
+  } // else ignore the disconnected sensor.
 
 
   // Perform the Post
@@ -582,7 +582,7 @@ boolean connectToAccessPoint(char *ssid, char *pass, long timeoutMs) {
     now = millis();
 
     if (wifiStatus == WL_NO_SSID_AVAIL) {
-      // AP is offline.
+      // Access Point is offline.
       Serial.print(F("Unable to find "));
       Serial.println(ssid);
       return false;
