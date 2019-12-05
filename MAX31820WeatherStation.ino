@@ -332,6 +332,7 @@ void loop() {
         Serial.print("NC");
       } else {
         Serial.print(stationTemperatureC, 2);
+        Serial.print(" C");
       }
       Serial.println();
 
