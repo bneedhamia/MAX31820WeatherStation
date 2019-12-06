@@ -22,8 +22,14 @@
      print the temperature sensor's 1-wire address,
      so you can copy it into the sensorAddress[] initializer.
      Comment this line out for normal Sketch behavior.
+
+   TEST_URL_ENCODING = uncomment this line to only
+     test the urlencodedcat() function.
+     Used only during development of urlencodedcat().
+     Comment this line out for normal Sketch behavior.
 */
 //#define PRINT_1_WIRE_ADDRESS true
+//#define TEST_URL_ENCODING true
 
 /*
     NOTE: because the ESP8266 WiFi operates in the background,
@@ -232,6 +238,12 @@ void setup() {
   delay(100); // give the Serial port time to power up.
   Serial.println(F("Reset."));
 
+#if defined(TEST_URL_ENCODING)
+  testUrlencodedcat();
+  state = STATE_ERROR;
+  return;
+#endif // defined(TEST_URL_ENCODING)
+
   // Set up our pins.
 
   pinMode(PIN_LED_L, OUTPUT);
@@ -407,17 +419,20 @@ boolean doHttpsPost() {
   WiFiClientSecure client;
 
 
-  // Build the content of the POST. That is, the parameters.
+  /*
+     Build the content of the POST. That is, the parameters.
+     UrlEncode the fields that can contain arbitrary text. 
+   */
 
   strcpy(content, "");
 
   strcat(content, "ID=");
-  strcat(content, stationId); //TODO urlencode
+  urlencodedcat(content, stationId);
 
   strcat(content, "&");
   strcat(content, "PASSWORD=");
-  strcat(content, stationKey); // TODO urlencode.
-
+  urlencodedcat(content, stationKey);
+  
   strcat(content, "&");
   strcat(content, "action=updateraw"); // says "I'm posting the weather"
 
@@ -432,7 +447,6 @@ boolean doHttpsPost() {
     strcat(content, "tempf=");
     floatcat(content, temperatureF);
   } // else ignore the disconnected sensor.
-
 
   // Perform the Post
 
@@ -522,6 +536,69 @@ void floatcat(char *buffer, float f) {
   f *= 100.0;
   itoa((long) f, p, 10);
 }
+
+/*
+   Append (concatenate) the given string to the given buffer,
+   UrlEncoding the string as it is appended.
+
+   buffer = a space to concatenate into. It must contain a null-terminated
+    set of characters, and be large enough to store the result.
+   str = points to the null-terminated string to UrlEncode and append.
+
+*/
+void urlencodedcat(char *buffer, char *str) {
+  char *pBuf; // points to the next empty space in buffer[]
+  char *pIn;  // points to a character in str[]
+  char ch;  // the current input character to UrlEncode.
+  char hexDigit[] = "0123456789ABCDEF";
+
+  pBuf = buffer + strlen(buffer);
+  
+  for (pIn = str; *pIn; ++pIn) {
+    ch = *pIn;
+    if (isAlphaNumeric(ch)) {
+      // Alphabetic and numeric characters are passed as-is.
+      *pBuf++ = ch;
+      continue;
+    }
+    
+    /*
+       All other characters are encoded as a % followed by
+       two hexidecimal characters. E.g., = is encoded as %3D.
+       Reference: https://developer.mozilla.org/en-US/docs/Glossary/percent-encoding
+     */
+
+     *pBuf++ = '%';
+     *pBuf++ = hexDigit[((int) ch >> 4) & 0xF];
+     *pBuf++ = hexDigit[((int) ch) & 0xF];
+  }
+
+  *pBuf = (char) 0; // null terminate the output.
+}
+
+#if defined(TEST_URL_ENCODING)
+/*
+   A simple unit test of the Url Encoding function.
+ */
+void testUrlencodedcat() {
+  static char input[255 + 1]; // 255 = 1..255, +1 for terminating null
+  static char output[255 * 3 + 1]; // 256 * 3 for each encoded char, +1 for terminating null
+
+  Serial.println(F("Output should be URL Encoded 0x01 through 0xff"));
+  
+  output[0] = (char) 0;
+  char *pIn = input;
+  for (int i = 1; i < 256; ++i) {
+    *pIn++ = (char) i;
+  }
+  *pIn = (char) 0;
+
+  urlencodedcat(output, input);
+
+  Serial.println(output);
+  
+}
+#endif // defined(TEST_URL_ENCODING)
 
 /*
    Prints the 1-wire address of each device found on the 1-wire bus.
