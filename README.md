@@ -10,12 +10,12 @@ I've posted a How-To on my hobby blog, at [needhamia.com](https://needhamia.com/
 
 ## Files
 * BillOfMaterials.ods = the parts list.
-* box.stl = the 3D printing file for the box that holds the parts. Print in PLA, upside down, with no support, raft, or brim.
-* boxLid.stl = the 3D printing file for the box's lid. Print in PLA, upside down, with no support, raft, or brim.
+* box.stl = the 3D printing file for the box that holds the parts. Print in PLA, with no support, raft, or brim.
+* boxLid.stl = the 3D printing file for the box's lid. Print in PLA, with no support, raft, or brim.
 * Diary.odt = my journal/diary of the project, with design and assembly details.
 * LICENSE = the project GPL2 license file.
 * MAX31820WeatherStation.ino = the ESP8266 Arduino Sketch.
+* MAX31820WeatherStation.f3d = the Fusion 360 design file for the box.
 * MAX31820WeatherStation.fzz = the Fritzing (circuit wiring) diagram. See [Fritzing.org](http://fritzing.org)
 * Project.jpg = a photo of the project so far.
-* ProjectBox.FCStd = the FreeCAD design file for the box that holds the parts.
 * README.md = this file.
