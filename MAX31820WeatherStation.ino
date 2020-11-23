@@ -60,7 +60,7 @@
 
      To Find the Fingerprint of a site:
      - Browse to an https: page on the desired server.
-       E.g., https://weatherstation.winderground.com
+       E.g., https://weatherstation.wunderground.com
        (you may get a 404 error; that's ok).
      - Copy the certificate from that page. There are instructions
        on how to do this in various browsers. Search for
@@ -83,7 +83,7 @@ const char *host = "weatherstation.wunderground.com";
 const int port = 443;
 const char *sslFingerprint
   = "50 22 08 9D DC 3C 2D FC 21 D4 22 30 07 8B 2E 68 63 47 20 02";
-  // Certificate expires August 25, 2021
+  // Certificate expires August 25, 2021, but it may be replaced earlier.
 const char *httpProtocol = "HTTP/1.0";
 const char *url = "/weatherstation/updateweatherstation.php";
 const char *httpAgent = "MAX31820WeatherStation";
