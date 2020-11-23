@@ -77,7 +77,7 @@
      update the code here with the new SSL certificate signature.
 
      The Weather Underground Personal Weather Station upload protocol
-     is specified at https://feedback.weather.com/customer/en/portal/articles/2924682-pws-upload-protocol?b_id=17298
+     is specified at https://support.weather.com/s/article/PWS-Upload-Protocol
 */
 const char *host = "weatherstation.wunderground.com";
 const int port = 443;
