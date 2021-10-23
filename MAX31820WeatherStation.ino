@@ -82,8 +82,8 @@
 const char *host = "weatherstation.wunderground.com";
 const int port = 443;
 const char *sslFingerprint
-  = "50 22 08 9D DC 3C 2D FC 21 D4 22 30 07 8B 2E 68 63 47 20 02";
-  // Certificate expires August 25, 2021, but it may be replaced earlier.
+  = "1E B5 E0 08 70 29 5B CE BB 34 23 08 80 60 71 3D 35 13 C5 8E";
+  // Certificate expires August 26, 2022, but it may be replaced earlier.
 const char *httpProtocol = "HTTP/1.0";
 const char *url = "/weatherstation/updateweatherstation.php";
 const char *httpAgent = "MAX31820WeatherStation";
