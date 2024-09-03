@@ -6,7 +6,7 @@ The state of the project: My weather station is installed on my garage wall, in 
 
 The Arduino Sketch requires a Sparkfun ESP8266 Thing Dev board, a MAX31820 temperature sensor, a 4.7K Ohm pull-up resistor and a few wires. Details are in BillOfMaterials.ods. Total cost: about $28 USD.
 
-I've posted a How-To on my hobby blog, at [needhamia.com](https://needhamia.com/build-a-minimal-weather-underground-station/)
+I've posted a How-To in my BluePaperTech.com post [Build a Minimal Weather Underground Station](https://bluepapertech.com/electronics/build-a-minimal-weather-underground-station/).
 
 ## Files
 * BillOfMaterials.ods = the parts list.
