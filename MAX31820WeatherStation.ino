@@ -354,7 +354,7 @@ void loop() {
 
     case STATE_WAITING_FOR_TEMPERATURES:
       if ((long) (nowMs - stateBegunMs)
-          < wireDevices.millisToWaitForConversion(MAX31820_RESOLUTION_BITS)) {
+          < wireDevices.millisToWaitForConversion(MAX31820_RESOLUTION_BITS) + 1) {
         return; // wait more.
       }
 
