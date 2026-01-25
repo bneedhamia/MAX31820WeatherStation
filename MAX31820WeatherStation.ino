@@ -8,7 +8,7 @@
    You will also need to program the EEPROM. See "The EEPROM layout" below.
 
    Copyright (c) 2018, 2019 Bradford Needham
-   { @bneedhamia , https://www.needhamia.com }
+   { @bneedhamia , https://bluepapertech.com/ }
 
    Licensed under GPL V2
    a copy of which should have been supplied with this file.
@@ -131,6 +131,7 @@ const uint8_t MAX31820_RESOLUTION_BITS = 12;
 /*
    The EEPROM layout, starting at START_ADDRESS, is:
    String[EEPROM_WIFI_SSID_INDEX] = WiFi SSID. A null-terminated string
+    SSID is Case-Sensitive.
    String[EEPROM_WIFI_PASS_INDEX] = WiFi Password. A null-terminated string
    String[EEPROM_STATION_ID_INDEX] =
      the HTTPS POST Weather Underground station ID parameter to send.
@@ -147,7 +148,7 @@ const uint8_t MAX31820_RESOLUTION_BITS = 12;
    the following lines:
 
   const char *STRING_NAME[] = {
-  "SSID",
+  "SSID",     // Case-Sensitive
   "Password",
   "stationId",
   "stationKey",
