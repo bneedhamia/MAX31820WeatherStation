@@ -486,6 +486,8 @@ boolean doHttpsPost() {
   client.println();  // blank line indicates the end of the HTTP headers.
 
   // send the content: the POST parameters.
+  Serial.println("Sending content: ");
+  Serial.println(content);
   client.print(content);
 
   Serial.println("Reading response:");
