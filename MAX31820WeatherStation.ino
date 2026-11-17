@@ -115,10 +115,11 @@ const int PIN_ONE_WIRE = 4;
 
 /*
    Time (milliseconds) per attempt to read and report the temperatures.
-   Set this to about 5 minutes (1000L * 60L * 5L) for normal operation,
-   so you don't overwhelm the server.
+   The new (2026) Weather Underground interface seems to ignore updates
+   faster than about 15 minutes apart, though I've found no clear
+   documentation of Weather Underground limits.
 */
-const long MS_PER_TEMPERATURE_REQUEST = 1000L * 60L * 5L;
+const long MS_PER_TEMPERATURE_REQUEST = 1000L * 60L * 15L;
 
 /*
    The resolution (number of bits) to set the temperature sensor to.
