@@ -2,9 +2,9 @@
 # MAX31820WeatherStation
 An Arduino Sketch for a Sparkfun ESP8266 Thing Dev board, using a MAX31820 temperature sensor to sense and report the current ambient temperature to the Weather Underground via WiFi.
 
-The state of the project: My weather station is installed on my garage wall, in the shade, and is sending the temperature to Weather Underground every 5 minutes. See Diary.odt for details.
+The state of the project: My weather station is installed on my garage wall, in the shade, and is sending the temperature to Weather Underground every 15 minutes. See Diary.odt for details.
 
-The Arduino Sketch requires a Sparkfun ESP8266 Thing Dev board, a MAX31820 temperature sensor, a 4.7K Ohm pull-up resistor and a few wires. Details are in BillOfMaterials.ods. Total cost: about $28 USD.
+The Arduino Sketch requires a Sparkfun ESP8266 Thing Dev board, a MAX31820 temperature sensor, a 4.7K Ohm pull-up resistor and a few wires. Details are in BillOfMaterials.ods. Total cost: about $28 USD (2019).
 
 I've posted a How-To in my BluePaperTech.com post [Build a Minimal Weather Underground Station](https://bluepapertech.com/electronics/build-a-minimal-weather-underground-station/).
 
